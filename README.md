@@ -28,6 +28,12 @@ augroup END
 nmap <silent> ;q <Cmd> call Ddu_qf()<CR>
 ```
 
+# Demo
+
+## quickfixs
+
+* https://github.com/lervag/vimtex
+* built-in lsp
 
 https://user-images.githubusercontent.com/42508708/216801105-f83bc38b-348e-4881-88c4-83fb33bda6b5.mp4
 
