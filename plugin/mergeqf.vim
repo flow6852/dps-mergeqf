@@ -1,7 +1,7 @@
-function! mergeqf#createlist(titles) abort
-    return denops#request('mergeqf', 'createlist', [a:titles])
+function! mergeqf#createlist(arg) abort
+    return denops#request('mergeqf', 'createlist', [a:arg])
 endfunction
 
-function! mergeqf#setlist(title, titles) abort
-    return denops#request('mergeqf', 'setlist', [a:title, a:titles])
+function! mergeqf#setlist(arg) abort
+    return denops#request('mergeqf', 'setlist', [a:arg])
 endfunction
