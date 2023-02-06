@@ -1,8 +1,17 @@
 import { Denops } from "https://deno.land/x/denops_std@v4.0.0/mod.ts";
 import { setqflist, getqflist } from "https://deno.land/x/denops_std@v4.0.0/function/mod.ts";
 
+export type Args = {
+    title: string;
+    titles: Array<string>;
+    withTitle: boolean;
+    sep: string;
+    forceUpdate: boolean;
+};
+
+
 export async function main(denops: Denops): Promise<void> {
-    const mergeqfs = async (args: {title: string; titles: Array<string>; withTitle: boolean; sep: string;}) => {
+    const mergeqfs = async (args: Args) => {
         let ret = new Array(0);
         if (args.titles.length){
             // initialize
@@ -35,7 +44,7 @@ export async function main(denops: Denops): Promise<void> {
 
         async setlist(args: unknown): Promise<void>{
             const clast = await getqflist(denops, {"id": 0, "title": 0});
-            if (clast.title != (args as Args).title) {
+            if ((args as Args).forceUpdate || clast.title != (args as Args).title) {
                 const mergedqf = await mergeqfs(args as Args);
                 await setqflist(denops, mergedqf, ' ');
                 await setqflist(denops, [], 'a', {'title': (args as Args).title});
