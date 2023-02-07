@@ -25,7 +25,6 @@ export async function main(denops: Denops): Promise<void> {
                             if (args.withTitle) {
                                 items.text = title + args.sep + items.text
                             }
-                            console.log(items);
                             ret.push(items);
                         }
                         break;
