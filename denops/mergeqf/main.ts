@@ -41,6 +41,7 @@ type What = {
   id?: number;
   lnum?: number;
   title?: string;
+  all?: number;
 };
 
 export async function main(denops: Denops): Promise<void> {
@@ -94,33 +95,6 @@ export async function main(denops: Denops): Promise<void> {
     return ret;
   };
 
-  const isContain = (qf: QuickFix, src: SourceFilter) => {
-    let ret = true;
-    for (const key of Object.keys(src.what)) {
-      switch (key) {
-        case "bufnr":
-          ret = ret && (qf.bufnr == src.what.bufnr);
-          break;
-        case "col":
-          ret = ret && (qf.col == src.what.col);
-          break;
-        case "id":
-          ret = ret && (qf.id == src.what.id);
-          break;
-        case "lnum":
-          ret = ret && (qf.lnum == src.what.lnum);
-          break;
-        case "title":
-          ret = ret &&
-            (src.isSubst
-              ? (!qf.title.indexOf(src.what.title as string))
-              : (qf.title == src.what.title));
-          break;
-      }
-    }
-    return ret;
-  };
-
   denops.dispatcher = {
     async crestelist(args: unknown): Promise<unknown> {
       const mergedqf = await mergeqfs(args as Args);
@@ -139,4 +113,31 @@ export async function main(denops: Denops): Promise<void> {
       }
     },
   };
+}
+
+function isContain (qf: QuickFix, src: SourceFilter) {
+  let ret = true;
+  for (const key of Object.keys(src.what)) {
+    switch (key) {
+      case "bufnr":
+        ret = ret && (qf.bufnr == src.what.bufnr);
+        break;
+      case "col":
+        ret = ret && (qf.col == src.what.col);
+        break;
+      case "id":
+        ret = ret && (qf.id == src.what.id);
+        break;
+      case "lnum":
+        ret = ret && (qf.lnum == src.what.lnum);
+        break;
+      case "title":
+        ret = ret &&
+          (src.isSubst
+            ? (!qf.title.indexOf(src.what.title as string))
+            : (qf.title == src.what.title));
+        break;
+    }
+  }
+  return ret;
 }
