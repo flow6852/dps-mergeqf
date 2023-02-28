@@ -1,8 +1,14 @@
 import { Denops } from "https://deno.land/x/denops_std@v4.0.0/mod.ts";
 import {
+  bufname,
+  getcwd,
   getqflist,
   setqflist,
 } from "https://deno.land/x/denops_std@v4.0.0/function/mod.ts";
+import {
+  basename,
+  isAbsolute,
+} from "https://deno.land/std@0.177.0/path/mod.ts";
 
 export type Args = {
   sources: Array<SourceFilter>;
@@ -21,9 +27,9 @@ type SourceFilter = {
 type QuickFix = {
   id: number;
   items: QuickFixItem[];
-  bufnr: number;
-  col: number;
-  lnum: number;
+  nr: number;
+  qfbufnr: number;
+  size: number;
   title: string;
 };
 
@@ -36,12 +42,11 @@ type QuickFixItem = {
 };
 
 type What = {
-  bufnr?: number;
-  col?: number;
   id?: number;
-  lnum?: number;
+  nr?: number;
+  qfbufnr?: number;
+  size?: number;
   title?: string;
-  all?: number;
 };
 
 export async function main(denops: Denops): Promise<void> {
@@ -53,20 +58,36 @@ export async function main(denops: Denops): Promise<void> {
 
       for (let src of args.sources) {
         for (let id: number = clastid; 0 < id; id--) {
-          const nowqflist = await getqflist(denops, {
-            "id": id,
-            "all": 0,
-          }) as QuickFix;
+          // default {what}
+          // if use {all: 0}, `getqflist` get items
+          const what: What = {
+            id: id,
+            nr: 0,
+            qfbufnr: 0,
+            title: "",
+            size: 0,
+          };
+
+          const nowqflist = await getqflist(denops, what) as QuickFix;
+
           if (isContain(nowqflist, src)) {
-            for (let items of nowqflist.items) {
+            const qflist = await getqflist(denops, {
+              id: id,
+              all: 0,
+            }) as QuickFix;
+            for (let items of qflist.items) {
+              const path = isAbsolute(await bufname(denops, items.bufnr))
+                ? await bufname(denops, items.bufnr)
+                : await getcwd(denops) + "/" +
+                  await bufname(denops, items.bufnr);
               // format text
               const regexp = new RegExp(/(\s|\t|\n|\v)+/g);
               const text: string = src.format.replaceAll(regexp, " ")
                 .replaceAll(
                   "%i",
-                  String(nowqflist.id),
+                  String(qflist.id),
                 ).replaceAll(
-                  "%b",
+                  "%n",
                   String(items.bufnr),
                 ).replaceAll(
                   "%c",
@@ -76,10 +97,19 @@ export async function main(denops: Denops): Promise<void> {
                   String(items.lnum),
                 ).replaceAll(
                   "%T",
-                  nowqflist.title,
+                  qflist.title,
                 ).replaceAll(
                   "%y",
                   items.type,
+                ).replaceAll(
+                  "%b",
+                  basename(await bufname(denops, items.bufnr)),
+                ).replaceAll(
+                  "%p",
+                  await bufname(denops, items.bufnr),
+                ).replaceAll(
+                  "%P",
+                  path,
                 ).replaceAll(
                   "%t",
                   items.text,
@@ -87,7 +117,9 @@ export async function main(denops: Denops): Promise<void> {
               items.text = text;
               ret.push(items);
             }
-            break;
+            if (!src.dup) {
+              break;
+            }
           }
         }
       }
@@ -115,21 +147,21 @@ export async function main(denops: Denops): Promise<void> {
   };
 }
 
-function isContain (qf: QuickFix, src: SourceFilter) {
+function isContain(qf: QuickFix, src: SourceFilter) {
   let ret = true;
   for (const key of Object.keys(src.what)) {
     switch (key) {
-      case "bufnr":
-        ret = ret && (qf.bufnr == src.what.bufnr);
+      case "qfbufnr":
+        ret = ret && (qf.qfbufnr == src.what.qfbufnr);
         break;
-      case "col":
-        ret = ret && (qf.col == src.what.col);
+      case "nr":
+        ret = ret && (qf.nr == src.what.nr);
+        break;
+      case "size":
+        ret = ret && (qf.size == src.what.size);
         break;
       case "id":
         ret = ret && (qf.id == src.what.id);
-        break;
-      case "lnum":
-        ret = ret && (qf.lnum == src.what.lnum);
         break;
       case "title":
         ret = ret &&
