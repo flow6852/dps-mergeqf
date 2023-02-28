@@ -3,7 +3,9 @@ import {
   bufname,
   getcwd,
   getqflist,
+  getloclist,
   setqflist,
+  setloclist,
 } from "https://deno.land/x/denops_std@v4.0.0/function/mod.ts";
 import {
   basename,
@@ -14,6 +16,7 @@ export type Args = {
   sources: Array<SourceFilter>;
   title: string;
   forceUpdate: boolean;
+  nr: number;
 };
 
 type SourceFilter = {
@@ -21,7 +24,7 @@ type SourceFilter = {
   format: string;
   isSubst: boolean;
   dup: boolean;
-  loc: boolean;
+  nr: number;
 };
 
 type QuickFix = {
@@ -51,12 +54,13 @@ type What = {
 
 export async function main(denops: Denops): Promise<void> {
   const mergeqfs = async (args: Args) => {
-    let ret = new Array(0);
+    const ret = new Array(0);
     if (args.sources.length) {
-      // initialize
-      const clastid = (await getqflist(denops, { "id": 0 }) as QuickFix).id;
-
-      for (let src of args.sources) {
+      for (const src of args.sources) {
+        // initialize
+        const clastid = src.nr > -1
+          ? (await getloclist(denops, src.nr, { "id": 0 }) as QuickFix).id
+          : (await getqflist(denops, { "id": 0 }) as QuickFix).id;
         for (let id: number = clastid; 0 < id; id--) {
           // default {what}
           // if use {all: 0}, `getqflist` get items
@@ -68,14 +72,21 @@ export async function main(denops: Denops): Promise<void> {
             size: 0,
           };
 
-          const nowqflist = await getqflist(denops, what) as QuickFix;
+          const nowqflist = src.nr > -1
+            ? await getloclist(denops, src.nr, what) as QuickFix
+            : await getqflist(denops, what) as QuickFix;
 
           if (isContain(nowqflist, src)) {
-            const qflist = await getqflist(denops, {
-              id: id,
-              all: 0,
-            }) as QuickFix;
-            for (let items of qflist.items) {
+            const qflist = src.nr > -1
+              ? await getloclist(denops, src.nr, {
+                id: id,
+                all: 0,
+              }) as QuickFix
+              : await getqflist(denops, {
+                id: id,
+                all: 0,
+              }) as QuickFix;
+            for (const items of qflist.items) {
               const path = isAbsolute(await bufname(denops, items.bufnr))
                 ? await bufname(denops, items.bufnr)
                 : await getcwd(denops) + "/" +
@@ -134,14 +145,24 @@ export async function main(denops: Denops): Promise<void> {
     },
 
     async setlist(args: unknown): Promise<void> {
-      const clast = await getqflist(denops, {
+      const clast = (args as Args).nr > -1 ? await getloclist(denops, (args as Args).nr ,{
+        "id": 0,
+        "title": 0,
+      }) as QuickFix
+        : await getqflist(denops, {
         "id": 0,
         "title": 0,
       }) as QuickFix;
       if ((args as Args).forceUpdate || clast.title != (args as Args).title) {
         const mergedqf = await mergeqfs(args as Args);
-        await setqflist(denops, mergedqf, " ");
-        await setqflist(denops, [], "a", { "title": (args as Args).title });
+        if ((args as Args).nr > -1 ) {
+            await setloclist(denops, (args as Args).nr, mergedqf, " ");
+            await setloclist(denops, (args as Args).nr, [], "a", { "title": (args as Args).title });
+        }
+        else {
+            await setqflist(denops, mergedqf, " ");
+            await setqflist(denops, [], "a", { "title": (args as Args).title });
+        }
       }
     },
   };
