@@ -52,11 +52,28 @@ type What = {
   title?: string;
 };
 
+const defaultArgs = {
+  sources: [],
+  title: "dps-mergeqf",
+  forceUpdate: true,
+  nr: -1,
+};
+
+const defaultSourceFilter = {
+  what: {},
+  format: "%t%",
+  isSubst: false,
+  dup: false,
+  nr: -1,
+}
+
 export async function main(denops: Denops): Promise<void> {
   const mergeqfs = async (args: Args) => {
+    args = {...defaultArgs, ...args};
     const ret = new Array(0);
     if (args.sources.length) {
-      for (const src of args.sources) {
+      for (let src of args.sources) {
+        src = { ...defaultSourceFilter, ...src};
         // initialize
         const clastid = src.nr > -1
           ? (await getloclist(denops, src.nr, { "id": 0 }) as QuickFix).id
